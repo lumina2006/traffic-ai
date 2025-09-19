@@ -1,0 +1,65 @@
+# Development Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Core requirements
+-r requirements.txt
+
+# Testing Framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+pytest-asyncio>=0.21.0
+pytest-xdist>=3.3.0  # Parallel testing
+pytest-benchmark>=4.0.0  # Performance testing
+coverage>=7.3.0
+
+# Code Quality & Linting
+black>=23.7.0  # Code formatting
+isort>=5.12.0  # Import sorting
+flake8>=6.0.0  # Linting
+mypy>=1.5.0    # Type checking
+pylint>=2.17.0  # Additional linting
+bandit>=1.7.5  # Security linting
+
+# Documentation
+sphinx>=7.1.0
+sphinx-rtd-theme>=1.3.0
+sphinx-autodoc-typehints>=1.24.0
+myst-parser>=2.0.0  # Markdown support
+
+# Development Tools
+jupyter>=1.0.0
+jupyterlab>=4.0.0
+notebook>=7.0.0
+ipykernel>=6.24.0
+ipywidgets>=8.1.0
+
+# Debugging
+ipdb>=0.13.13
+pdb-attach>=3.2.0
+py-spy>=0.3.14  # Profiling
+
+# Pre-commit Hooks
+pre-commit>=3.3.0
+
+# Performance Profiling
+line-profiler>=4.1.0
+memory-profiler>=0.61.0
+psutil>=5.9.0
+
+# Data Science & Visualization (Development)
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+bokeh>=3.2.0
+
+# Utilities
+tox>=4.6.0  # Testing across Python versions
+invoke>=2.2.0  # Task automation
+watchdog>=3.0.0  # File watching
+rich>=13.5.0  # Rich terminal output
+
+# API Development & Testing
+httpx>=0.24.0
+respx>=0.20.0  # HTTP mocking
+faker>=19.3.0  # Test data generation

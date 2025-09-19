@@ -1,0 +1,112 @@
+# Core AI/ML Libraries
+torch>=2.0.0
+torchvision>=0.15.0
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+pandas>=2.0.0
+
+# Computer Vision & Image Processing
+Pillow>=9.5.0
+imageio>=2.28.0
+albumentations>=1.3.0
+
+# Deep Learning & Neural Networks
+tensorflow>=2.12.0
+keras>=2.12.0
+onnx>=1.14.0
+onnxruntime>=1.15.0
+
+# Object Tracking
+filterpy>=1.4.5
+lap>=0.4.0
+
+# Video Processing
+ffmpeg-python>=0.2.0
+moviepy>=1.0.3
+
+# Web Framework & API
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+flask>=2.3.0
+flask-cors>=4.0.0
+websockets>=11.0.0
+streamlit>=1.24.0
+
+# Data Processing & Analysis
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+dash>=2.11.0
+
+# Database & Storage
+sqlalchemy>=2.0.0
+sqlite3  # Built-in with Python
+redis>=4.6.0
+pymongo>=4.4.0
+
+# Configuration & Environment
+pyyaml>=6.0
+python-dotenv>=1.0.0
+configparser>=5.3.0
+
+# Logging & Monitoring
+loguru>=0.7.0
+tensorboard>=2.13.0
+wandb>=0.15.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+pytest-asyncio>=0.21.0
+
+# Code Quality
+black>=23.7.0
+flake8>=6.0.0
+isort>=5.12.0
+mypy>=1.5.0
+
+# Utilities
+tqdm>=4.65.0
+requests>=2.31.0
+aiohttp>=3.8.0
+python-multipart>=0.0.6
+
+# Deployment & Production
+gunicorn>=21.0.0
+docker>=6.1.0
+kubernetes>=27.0.0
+
+# Optional GPU Support (uncomment if using CUDA)
+# torch-audio>=2.0.0  # For audio processing if needed
+# torchtext>=0.15.0   # For text processing if needed
+
+# Development Tools
+jupyter>=1.0.0
+ipykernel>=6.24.0
+notebook>=7.0.0
+jupyterlab>=4.0.0
+
+# System & OS Integration
+psutil>=5.9.0
+pathlib2>=2.3.7; python_version < '3.4'
+
+# HTTP & Networking
+httpx>=0.24.0
+websocket-client>=1.6.0
+
+# Time & Date
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# Performance & Optimization
+numba>=0.57.0
+joblib>=1.3.0
+dask>=2023.7.0
+
+# Security
+cryptography>=41.0.0
+pycryptodome>=3.18.0

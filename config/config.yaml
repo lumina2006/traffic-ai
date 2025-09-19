@@ -1,0 +1,278 @@
+# Traffic AI Configuration File
+# This file contains all configuration parameters for the Traffic AI system
+
+# Detection Configuration
+detection:
+  # YOLO model settings
+  model: "yolov8n.pt"  # Options: yolov8n, yolov8s, yolov8m, yolov8l, yolov8x
+  model_path: null  # Path to custom model (overrides model if provided)
+  
+  # Detection parameters  
+  confidence_threshold: 0.5  # Minimum confidence score (0.0 - 1.0)
+  iou_threshold: 0.4  # IoU threshold for NMS (0.0 - 1.0)
+  device: "auto"  # Device for inference: auto, cpu, cuda, 0, 1, etc.
+  img_size: 640  # Input image size for model
+  
+  # Vehicle classes to detect (COCO dataset class IDs)
+  vehicle_classes:
+    car: 2
+    motorcycle: 3
+    bus: 5
+    truck: 7
+
+# Tracking Configuration
+tracking:
+  # Tracker type: sort, deepsort
+  tracker_type: "sort"
+  
+  # SORT parameters
+  max_age: 30  # Maximum frames to keep track alive without detection
+  min_hits: 3  # Minimum hits before confirming track
+  iou_threshold: 0.3  # IoU threshold for track association
+  
+  # DeepSORT parameters (if using DeepSORT)
+  max_cosine_distance: 0.2
+  nn_budget: 100
+  max_iou_distance: 0.7
+
+# Analysis Configuration  
+analysis:
+  # Frame processing
+  fps: 30.0  # Video frame rate
+  frame_buffer_size: 300  # Frames to keep in history (10 sec at 30fps)
+  
+  # Traffic zones (regions of interest)
+  zones:
+    - name: "main_road"
+      type: "counting"
+      polygon: [[100, 100], [500, 100], [500, 400], [100, 400]]
+    
+    - name: "intersection"
+      type: "density"  
+      polygon: [[200, 150], [400, 150], [400, 350], [200, 350]]
+  
+  # Counting lines for flow measurement
+  counting_lines:
+    - name: "northbound"
+      start: [250, 100]
+      end: [250, 400] 
+      direction: "up"
+    
+    - name: "southbound"
+      start: [350, 100]
+      end: [350, 400]
+      direction: "down"
+  
+  # Congestion detection thresholds
+  congestion:
+    density_thresholds:
+      high: 0.5  # vehicles per 1000 pixels
+      medium: 0.2
+    
+    speed_thresholds:
+      low: 2.0  # pixels per frame
+      medium: 5.0
+
+# Prediction Configuration
+prediction:
+  # Model parameters
+  model_type: "lstm"  # Options: lstm, prophet, arima
+  prediction_horizon: 30  # Minutes into future
+  lookback_window: 60  # Minutes of historical data to use
+  update_frequency: 5  # Minutes between model updates
+  
+  # LSTM specific parameters
+  lstm:
+    sequence_length: 12  # Number of time steps for input
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.2
+    learning_rate: 0.001
+    batch_size: 32
+    epochs: 100
+
+# Camera Configuration
+cameras:
+  default:
+    fps: 30
+    resolution: [1920, 1080]
+    roi: null  # Region of interest: [[x1,y1], [x2,y2]]
+  
+  camera_sources:
+    - name: "main_street"
+      url: "rtmp://192.168.1.100/stream1"
+      type: "rtmp"
+      fps: 30
+      roi: [[100, 100], [1820, 980]]
+      
+    - name: "highway_junction" 
+      url: "http://192.168.1.101/stream.mjpg"
+      type: "mjpeg"
+      fps: 25
+      roi: [[0, 200], [1920, 880]]
+      
+    - name: "webcam"
+      url: 0  # Camera index for local webcam
+      type: "usb"
+      fps: 30
+      roi: null
+
+# Web Application Configuration
+web_app:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+  
+  # Dashboard settings
+  dashboard:
+    refresh_rate: 1  # seconds
+    max_history_points: 1000
+    charts:
+      - type: "vehicle_count"
+        title: "Vehicle Count Over Time"
+        
+      - type: "density_heatmap" 
+        title: "Traffic Density"
+        
+      - type: "speed_gauge"
+        title: "Average Speed"
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  
+  # Rate limiting
+  rate_limit:
+    requests_per_minute: 100
+    burst_size: 10
+  
+  # Authentication (if enabled)
+  auth:
+    enabled: false
+    api_key: null
+    
+  # CORS settings
+  cors:
+    enabled: true
+    origins: ["*"]
+
+# Database Configuration
+database:
+  # Database type: sqlite, postgresql, mysql
+  type: "sqlite"
+  
+  # SQLite settings
+  sqlite:
+    path: "data/traffic_ai.db"
+  
+  # PostgreSQL settings (if using)
+  postgresql:
+    host: "localhost"
+    port: 5432
+    database: "traffic_ai"
+    username: "postgres"
+    password: "password"
+  
+  # Data retention
+  retention:
+    detection_results: 7  # days
+    tracking_results: 7   # days  
+    metrics: 30          # days
+    predictions: 14      # days
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # Log files
+  files:
+    main: "logs/traffic_ai.log"
+    detection: "logs/detection.log"
+    tracking: "logs/tracking.log" 
+    analysis: "logs/analysis.log"
+    prediction: "logs/prediction.log"
+    api: "logs/api.log"
+  
+  # Log rotation
+  rotation:
+    max_size: "10MB"
+    backup_count: 5
+
+# Performance Configuration  
+performance:
+  # Multiprocessing
+  use_multiprocessing: true
+  num_workers: 4  # Number of worker processes (auto-detect if null)
+  
+  # GPU settings
+  gpu:
+    enabled: true
+    memory_fraction: 0.8  # Fraction of GPU memory to use
+  
+  # Optimization
+  batch_processing: true
+  batch_size: 4
+  
+  # Caching
+  cache:
+    enabled: true
+    max_size: 1000  # Maximum cached items
+    ttl: 300  # Time to live in seconds
+
+# Alerts Configuration
+alerts:
+  enabled: true
+  
+  # Alert types
+  types:
+    - name: "high_congestion"
+      condition: "congestion_level == 'high'"
+      threshold: 5  # minutes of continuous condition
+      
+    - name: "low_speed"  
+      condition: "average_speed < 1.0"
+      threshold: 3  # minutes
+      
+    - name: "high_density"
+      condition: "density > 0.8"
+      threshold: 2  # minutes
+  
+  # Notification channels
+  notifications:
+    email:
+      enabled: false
+      smtp_server: "smtp.gmail.com"
+      smtp_port: 587
+      username: null
+      password: null
+      recipients: []
+    
+    webhook:
+      enabled: false
+      url: null
+      headers: {}
+    
+    console:
+      enabled: true
+
+# Deployment Configuration
+deployment:
+  environment: "development"  # development, staging, production
+  
+  # Docker settings
+  docker:
+    image_name: "traffic-ai"
+    tag: "latest"
+    
+  # Cloud settings
+  cloud:
+    provider: null  # aws, gcp, azure
+    region: null
+    
+  # Scaling
+  scaling:
+    auto_scale: false
+    min_instances: 1
+    max_instances: 5
