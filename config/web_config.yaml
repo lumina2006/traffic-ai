@@ -1,0 +1,84 @@
+# Traffic AI Web Application Configuration
+
+app:
+  title: "Traffic AI Dashboard"
+  version: "1.0.0"
+  debug: true
+  host: "0.0.0.0"
+  port: 5000
+
+# Detection Configuration
+detection:
+  model: "yolov8n"
+  confidence_threshold: 0.5
+  device: "cpu"
+  input_size: 640
+  max_detections: 1000
+
+# Tracking Configuration
+tracking:
+  max_age: 30
+  min_hits: 3
+  iou_threshold: 0.3
+  tracker_type: "deepsort"
+
+# Analysis Configuration
+analysis:
+  roi_zones: ["zone1", "zone2"]
+  fps: 30
+  buffer_size: 100
+  save_results: true
+
+# Prediction Configuration
+prediction:
+  model_type: "lstm"
+  lookback_window: 60  # minutes
+  prediction_horizon: 30  # minutes
+  update_interval: 300  # seconds
+
+# Camera Configuration
+cameras:
+  default_resolution: "1920x1080"
+  default_fps: 30
+  recording_enabled: false
+  motion_detection: true
+
+# Web Interface Configuration
+web:
+  auto_refresh_interval: 30000  # milliseconds
+  chart_update_interval: 5000   # milliseconds
+  max_recent_activities: 10
+  enable_real_time_updates: true
+
+# Database Configuration
+database:
+  type: "sqlite"
+  path: "data/traffic_ai.db"
+  backup_interval: 86400  # seconds (24 hours)
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "logs/traffic_ai.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# Security Configuration
+security:
+  secret_key: "traffic-ai-secret-key-2024"
+  session_timeout: 3600  # seconds
+  max_login_attempts: 5
+
+# Performance Configuration
+performance:
+  max_concurrent_detections: 4
+  memory_limit: "2GB"
+  cpu_cores: 4
+  gpu_memory_fraction: 0.7
+
+# Export Configuration
+export:
+  formats: ["csv", "json", "pdf"]
+  default_format: "csv"
+  compression: true
+  include_metadata: true

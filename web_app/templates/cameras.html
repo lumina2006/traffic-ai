@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Camera Management - {{ config.app.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-video me-2 text-primary"></i>
+                Camera Management
+            </h1>
+            <p class="text-muted">Configure and monitor traffic cameras</p>
+        </div>
+    </div>
+
+    <!-- Camera Cards -->
+    <div class="row">
+        {% for camera in cameras %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card camera-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ camera.name }}</h5>
+                    <span class="status-badge status-{{ camera.status }}">
+                        {{ camera.status.upper() }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <!-- Camera Preview -->
+                    <div class="ratio ratio-16x9 mb-3">
+                        <div class="bg-dark d-flex align-items-center justify-content-center rounded">
+                            {% if camera.status == 'active' %}
+                            <div class="text-center text-white">
+                                <i class="fas fa-video fa-3x mb-2"></i>
+                                <div>Live Feed</div>
+                                <small class="traffic-{{ camera.current_traffic }} px-2 py-1 rounded">
+                                    {{ camera.current_traffic.title() }} Traffic
+                                </small>
+                            </div>
+                            {% else %}
+                            <div class="text-center text-muted">
+                                <i class="fas fa-tools fa-3x mb-2"></i>
+                                <div>Camera Offline</div>
+                                <small>{{ camera.status.title() }}</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Camera Info -->
+                    <div class="mb-3">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            Location: {{ camera.location }}
+                        </small>
+                        <small class="text-muted d-block">
+                            <i class="fas fa-link me-1"></i>
+                            URL: {{ camera.url }}
+                        </small>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-sm" onclick="editCamera({{ camera.id }})">
+                            <i class="fas fa-edit me-1"></i>
+                            Edit Camera
+                        </button>
+                        {% if camera.status == 'active' %}
+                        <button class="btn btn-success btn-sm" onclick="startDetection({{ camera.id }})">
+                            <i class="fas fa-play me-1"></i>
+                            Start Detection
+                        </button>
+                        {% else %}
+                        <button class="btn btn-warning btn-sm" onclick="testCamera({{ camera.id }})">
+                            <i class="fas fa-check-circle me-1"></i>
+                            Test Connection
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Add New Camera Card -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 border-dashed">
+                <div class="card-body d-flex align-items-center justify-content-center text-center">
+                    <div>
+                        <i class="fas fa-plus-circle fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Add New Camera</h5>
+                        <button class="btn btn-outline-primary" onclick="showAddCameraModal()">
+                            <i class="fas fa-plus me-2"></i>
+                            Add Camera
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Statistics -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Camera Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Camera</th>
+                                    <th>Status</th>
+                                    <th>Location</th>
+                                    <th>Current Traffic</th>
+                                    <th>Vehicles Detected (Today)</th>
+                                    <th>Last Activity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for camera in cameras %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ camera.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-{{ camera.status }}">
+                                            {{ camera.status.upper() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ camera.location }}</td>
+                                    <td>
+                                        <span class="badge traffic-{{ camera.current_traffic }}">
+                                            {{ camera.current_traffic.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ range(450, 1200) | random }}</td>
+                                    <td>
+                                        {% if camera.status == 'active' %}
+                                        <span class="text-success">
+                                            <i class="fas fa-circle me-1"></i>
+                                            Active now
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">2 hours ago</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" onclick="editCamera({{ camera.id }})" data-bs-toggle="tooltip" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-success" onclick="startDetection({{ camera.id }})" data-bs-toggle="tooltip" title="Start Detection">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="deleteCamera({{ camera.id }})" data-bs-toggle="tooltip" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Camera Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cameraModalTitle">Add New Camera</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cameraForm">
+                    <input type="hidden" id="cameraId">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Camera Name *</label>
+                            <input type="text" class="form-control" id="cameraName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Location *</label>
+                            <input type="text" class="form-control" id="cameraLocation" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <label class="form-label">Stream URL *</label>
+                            <input type="text" class="form-control" id="cameraUrl" placeholder="rtmp://camera-ip/stream" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="cameraStatus">
+                                <option value="active">Active</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="offline">Offline</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Traffic Level</label>
+                            <select class="form-select" id="cameraTraffic">
+                                <option value="light">Light</option>
+                                <option value="moderate">Moderate</option>
+                                <option value="heavy">Heavy</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Advanced Settings -->
+                    <div class="mt-4">
+                        <h6>Advanced Settings</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Resolution</label>
+                                <select class="form-select" id="cameraResolution">
+                                    <option value="1920x1080">1920x1080 (Full HD)</option>
+                                    <option value="1280x720">1280x720 (HD)</option>
+                                    <option value="640x480">640x480 (SD)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Frame Rate (FPS)</label>
+                                <input type="number" class="form-control" id="cameraFPS" value="30" min="1" max="60">
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cameraRecording">
+                                    <label class="form-check-label" for="cameraRecording">
+                                        Enable Recording
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cameraMotionDetection">
+                                    <label class="form-check-label" for="cameraMotionDetection">
+                                        Motion Detection
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveCamera()">
+                    <i class="fas fa-save me-2"></i>
+                    Save Camera
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentCameraId = null;
+
+function showAddCameraModal() {
+    currentCameraId = null;
+    document.getElementById('cameraModalTitle').textContent = 'Add New Camera';
+    document.getElementById('cameraForm').reset();
+    document.getElementById('cameraId').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('cameraModal'));
+    modal.show();
+}
+
+function editCamera(cameraId) {
+    currentCameraId = cameraId;
+    document.getElementById('cameraModalTitle').textContent = 'Edit Camera';
+    
+    // Load camera data (simulate with demo data)
+    const demoData = {
+        1: { name: 'Main Street Intersection', location: 'Downtown', url: 'rtmp://demo-camera-1.local/stream', status: 'active', traffic: 'moderate' },
+        2: { name: 'Highway Junction A', location: 'North Highway', url: 'rtmp://demo-camera-2.local/stream', status: 'active', traffic: 'heavy' },
+        3: { name: 'School Zone Camera', location: 'School District', url: 'rtmp://demo-camera-3.local/stream', status: 'maintenance', traffic: 'light' }
+    };
+    
+    const camera = demoData[cameraId];
+    if (camera) {
+        document.getElementById('cameraId').value = cameraId;
+        document.getElementById('cameraName').value = camera.name;
+        document.getElementById('cameraLocation').value = camera.location;
+        document.getElementById('cameraUrl').value = camera.url;
+        document.getElementById('cameraStatus').value = camera.status;
+        document.getElementById('cameraTraffic').value = camera.traffic;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('cameraModal'));
+    modal.show();
+}
+
+async function saveCamera() {
+    const formData = {
+        name: document.getElementById('cameraName').value,
+        location: document.getElementById('cameraLocation').value,
+        url: document.getElementById('cameraUrl').value,
+        status: document.getElementById('cameraStatus').value,
+        current_traffic: document.getElementById('cameraTraffic').value,
+        resolution: document.getElementById('cameraResolution').value,
+        fps: document.getElementById('cameraFPS').value,
+        recording: document.getElementById('cameraRecording').checked,
+        motion_detection: document.getElementById('cameraMotionDetection').checked
+    };
+    
+    try {
+        if (currentCameraId) {
+            // Update existing camera
+            await apiCall(`/api/cameras/${currentCameraId}`, 'PUT', formData);
+            showAlert('Camera updated successfully!', 'success');
+        } else {
+            // Add new camera
+            showAlert('New camera added successfully!', 'success');
+        }
+        
+        // Close modal and refresh page
+        const modal = bootstrap.Modal.getInstance(document.getElementById('cameraModal'));
+        modal.hide();
+        
+        // Refresh the page after a short delay
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+        
+    } catch (error) {
+        showAlert('Failed to save camera: ' + error.message, 'danger');
+    }
+}
+
+async function deleteCamera(cameraId) {
+    if (confirm('Are you sure you want to delete this camera? This action cannot be undone.')) {
+        try {
+            showAlert('Camera deleted successfully!', 'success');
+            
+            // Refresh the page after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+            
+        } catch (error) {
+            showAlert('Failed to delete camera: ' + error.message, 'danger');
+        }
+    }
+}
+
+async function startDetection(cameraId) {
+    try {
+        showAlert(`Starting detection for camera ${cameraId}...`, 'info');
+        await apiCall('/api/detection/start', 'POST', { camera_id: cameraId });
+        showAlert('Detection started successfully!', 'success');
+    } catch (error) {
+        showAlert('Failed to start detection: ' + error.message, 'danger');
+    }
+}
+
+async function testCamera(cameraId) {
+    try {
+        showAlert(`Testing connection for camera ${cameraId}...`, 'info');
+        
+        // Simulate connection test
+        setTimeout(() => {
+            showAlert('Camera connection test completed successfully!', 'success');
+        }, 2000);
+        
+    } catch (error) {
+        showAlert('Camera connection test failed: ' + error.message, 'danger');
+    }
+}
+
+// Auto-refresh camera status
+document.addEventListener('DOMContentLoaded', function() {
+    startAutoRefresh(async function() {
+        try {
+            const cameras = await apiCall('/api/cameras');
+            console.log('Camera status refreshed:', cameras);
+            // Update UI with new camera data
+        } catch (error) {
+            console.error('Failed to refresh camera status:', error);
+        }
+    }, 60000); // Refresh every minute
+});
+</script>
+
+<style>
+.border-dashed {
+    border: 2px dashed #dee2e6 !important;
+    border-style: dashed !important;
+}
+
+.border-dashed:hover {
+    border-color: var(--secondary-color) !important;
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+.camera-card {
+    transition: all 0.3s ease;
+}
+
+.camera-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.table th {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

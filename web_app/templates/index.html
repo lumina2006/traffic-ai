@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ config.app.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-chart-line me-2 text-primary"></i>
+                Traffic Analysis Dashboard
+            </h1>
+            <p class="text-muted">Real-time traffic monitoring and analysis</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="stats-number">{{ demo_data.traffic_stats.total_vehicles }}</div>
+                    <div class="stats-label">Total Vehicles</div>
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Last updated: {{ demo_data.traffic_stats.last_updated }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="stats-number">{{ demo_data.traffic_stats.avg_speed }}</div>
+                    <div class="stats-label">Avg Speed (mph)</div>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        +2.3 from yesterday
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="stats-number">{{ demo_data.traffic_stats.incidents }}</div>
+                    <div class="stats-label">Active Incidents</div>
+                    <small class="text-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Requires attention
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="stats-number traffic-{{ demo_data.traffic_stats.congestion_level }} px-3 py-1 rounded">
+                        {{ demo_data.traffic_stats.congestion_level.upper() }}
+                    </div>
+                    <div class="stats-label">Congestion Level</div>
+                    <small class="text-info">
+                        <i class="fas fa-info-circle me-1"></i>
+                        City-wide average
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Live Camera Feeds -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-video me-2"></i>
+                        Live Camera Feeds
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light me-2" onclick="refreshCameras()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Refresh
+                        </button>
+                        <span id="camera-spinner" class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="camera-feeds">
+                        {% for camera in demo_data.cameras %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card camera-card">
+                                <div class="card-header bg-light">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">{{ camera.name }}</h6>
+                                        <span class="status-badge status-{{ camera.status }}">
+                                            {{ camera.status.upper() }}
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">{{ camera.location }}</small>
+                                </div>
+                                <div class="card-body p-2">
+                                    <!-- Demo video placeholder -->
+                                    <div class="ratio ratio-16x9 mb-2">
+                                        <div class="bg-dark d-flex align-items-center justify-content-center rounded">
+                                            {% if camera.status == 'active' %}
+                                            <div class="text-center text-white">
+                                                <i class="fas fa-video fa-2x mb-2"></i>
+                                                <div>Live Stream</div>
+                                                <small>{{ camera.current_traffic.title() }} Traffic</small>
+                                            </div>
+                                            {% else %}
+                                            <div class="text-center text-muted">
+                                                <i class="fas fa-tools fa-2x mb-2"></i>
+                                                <div>Camera Offline</div>
+                                                <small>Under Maintenance</small>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <button class="btn btn-sm btn-primary" onclick="startDetection({{ camera.id }})">
+                                            <i class="fas fa-play me-1"></i>
+                                            Start Detection
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="viewFullscreen({{ camera.id }})">
+                                            <i class="fas fa-expand me-1"></i>
+                                            Fullscreen
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="col-lg-4">
+            <!-- Real-time Controls -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        Control Panel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Detection Model</label>
+                        <select class="form-select" id="detection-model" onchange="updateModel()">
+                            <option value="yolov8n" {{ 'selected' if config.detection.model == 'yolov8n' }}>YOLOv8n (Fast)</option>
+                            <option value="yolov8s" {{ 'selected' if config.detection.model == 'yolov8s' }}>YOLOv8s (Balanced)</option>
+                            <option value="yolov8m" {{ 'selected' if config.detection.model == 'yolov8m' }}>YOLOv8m (Accurate)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Confidence Threshold</label>
+                        <input type="range" class="form-range" id="confidence-threshold" 
+                               min="0.1" max="1.0" step="0.1" 
+                               value="{{ config.detection.confidence_threshold }}"
+                               onchange="updateConfidence(this.value)">
+                        <small class="text-muted">Current: <span id="confidence-value">{{ config.detection.confidence_threshold }}</span></small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Processing Device</label>
+                        <select class="form-select" id="device-select" onchange="updateDevice()">
+                            <option value="cpu" {{ 'selected' if config.detection.device == 'cpu' }}>CPU</option>
+                            <option value="cuda" {{ 'selected' if config.detection.device == 'cuda' }}>GPU (CUDA)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" onclick="startGlobalDetection()">
+                            <i class="fas fa-play me-2"></i>
+                            Start All Cameras
+                        </button>
+                        <button class="btn btn-danger" onclick="stopGlobalDetection()">
+                            <i class="fas fa-stop me-2"></i>
+                            Stop All Detection
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Recent Detections
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="recent-detections">
+                        {% for detection in demo_data.recent_detections %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ detection.camera }}</h6>
+                                    <small class="text-muted">{{ detection.vehicles }} vehicles detected</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">{{ detection.time }}</small>
+                                    <br>
+                                    <span class="badge bg-primary">{{ detection.type }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Traffic Flow Chart -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-area me-2"></i>
+                        Traffic Flow Visualization
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="traffic-chart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Initialize traffic flow chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('traffic-chart').getContext('2d');
+    
+    // Generate sample data
+    const hours = Array.from({length: 24}, (_, i) => i + ':00');
+    const trafficData = Array.from({length: 24}, () => Math.floor(Math.random() * 100) + 20);
+    
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: hours,
+            datasets: [{
+                label: 'Vehicle Count',
+                data: trafficData,
+                borderColor: 'rgb(52, 152, 219)',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Vehicles'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time (Hours)'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Auto-refresh data every 30 seconds
+    startAutoRefresh(async function() {
+        try {
+            const response = await apiCall('/api/traffic/current');
+            updateDashboardStats(response);
+        } catch (error) {
+            console.error('Failed to refresh data:', error);
+        }
+    }, 30000);
+});
+
+// Dashboard functions
+async function refreshCameras() {
+    showSpinner('camera-spinner');
+    try {
+        const cameras = await apiCall('/api/cameras');
+        updateCameraFeeds(cameras);
+        showAlert('Camera feeds refreshed successfully', 'success');
+    } catch (error) {
+        showAlert('Failed to refresh camera feeds: ' + error.message, 'danger');
+    } finally {
+        hideSpinner('camera-spinner');
+    }
+}
+
+async function startDetection(cameraId) {
+    try {
+        showAlert('Starting detection for camera ' + cameraId, 'info');
+        const result = await apiCall('/api/detection/start', 'POST', { camera_id: cameraId });
+        showAlert('Detection started successfully', 'success');
+    } catch (error) {
+        showAlert('Failed to start detection: ' + error.message, 'danger');
+    }
+}
+
+async function startGlobalDetection() {
+    try {
+        showAlert('Starting detection on all cameras...', 'info');
+        // Simulate starting detection on all cameras
+        for (let i = 1; i <= 3; i++) {
+            await apiCall('/api/detection/start', 'POST', { camera_id: i });
+        }
+        showAlert('All cameras are now running detection', 'success');
+    } catch (error) {
+        showAlert('Failed to start global detection: ' + error.message, 'danger');
+    }
+}
+
+async function stopGlobalDetection() {
+    try {
+        showAlert('Stopping all detection...', 'info');
+        showAlert('All detection stopped successfully', 'success');
+    } catch (error) {
+        showAlert('Failed to stop detection: ' + error.message, 'danger');
+    }
+}
+
+function viewFullscreen(cameraId) {
+    showAlert(`Opening camera ${cameraId} in fullscreen mode`, 'info');
+}
+
+async function updateModel() {
+    const model = document.getElementById('detection-model').value;
+    try {
+        await apiCall('/api/config', 'POST', {
+            detection: { model: model }
+        });
+        showAlert(`Detection model updated to ${model}`, 'success');
+    } catch (error) {
+        showAlert('Failed to update model: ' + error.message, 'danger');
+    }
+}
+
+async function updateConfidence(value) {
+    document.getElementById('confidence-value').textContent = value;
+    try {
+        await apiCall('/api/config', 'POST', {
+            detection: { confidence_threshold: parseFloat(value) }
+        });
+    } catch (error) {
+        console.error('Failed to update confidence:', error);
+    }
+}
+
+async function updateDevice() {
+    const device = document.getElementById('device-select').value;
+    try {
+        await apiCall('/api/config', 'POST', {
+            detection: { device: device }
+        });
+        showAlert(`Processing device updated to ${device}`, 'success');
+    } catch (error) {
+        showAlert('Failed to update device: ' + error.message, 'danger');
+    }
+}
+
+function updateDashboardStats(data) {
+    // Update stats if elements exist
+    const statsElements = document.querySelectorAll('.stats-number');
+    if (statsElements.length > 0 && data) {
+        // Update with new data
+        console.log('Updating dashboard with:', data);
+    }
+}
+
+function updateCameraFeeds(cameras) {
+    // Update camera feed display
+    console.log('Updating camera feeds:', cameras);
+}
+</script>
+{% endblock %}

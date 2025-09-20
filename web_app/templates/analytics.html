@@ -1,0 +1,599 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - {{ config.app.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-chart-bar me-2 text-primary"></i>
+                Traffic Analytics
+            </h1>
+            <p class="text-muted">Comprehensive traffic analysis and reporting</p>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card text-center">
+                <div class="card-body">
+                    <i class="fas fa-car fa-2x text-primary mb-2"></i>
+                    <div class="stats-number">{{ stats.total_vehicles }}</div>
+                    <div class="stats-label">Total Vehicles Today</div>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        +12% from yesterday
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center">
+                <div class="card-body">
+                    <i class="fas fa-tachometer-alt fa-2x text-success mb-2"></i>
+                    <div class="stats-number">{{ stats.avg_speed }}</div>
+                    <div class="stats-label">Average Speed (mph)</div>
+                    <small class="text-info">
+                        <i class="fas fa-equals me-1"></i>
+                        Same as yesterday
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center">
+                <div class="card-body">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                    <div class="stats-number">{{ stats.incidents }}</div>
+                    <div class="stats-label">Traffic Incidents</div>
+                    <small class="text-danger">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        +1 from yesterday
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center">
+                <div class="card-body">
+                    <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                    <div class="stats-number">14.2</div>
+                    <div class="stats-label">Avg Wait Time (min)</div>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-down me-1"></i>
+                        -5% from yesterday
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Traffic Flow Chart -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Traffic Flow Analysis
+                    </h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary active" onclick="updateChart('hourly')">Hourly</button>
+                        <button class="btn btn-outline-secondary" onclick="updateChart('daily')">Daily</button>
+                        <button class="btn btn-outline-secondary" onclick="updateChart('weekly')">Weekly</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="trafficFlowChart" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Activity -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-pulse me-2"></i>
+                        Real-time Activity
+                    </h5>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    <div class="list-group list-group-flush" id="realtime-activity">
+                        <!-- Activity items will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Classification -->
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-pie-chart me-2"></i>
+                        Vehicle Classification
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="vehicleClassChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Speed Distribution -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Speed Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="speedDistChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Traffic Density Heatmap -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-th me-2"></i>
+                        Traffic Density Heatmap
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="heatmap-container">
+                        <!-- Heatmap visualization -->
+                        <div class="row text-center">
+                            {% for hour in range(24) %}
+                            <div class="col">
+                                <div class="heatmap-hour">
+                                    <small class="d-block">{{ hour }}:00</small>
+                                    {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                                    <div class="heatmap-cell" data-hour="{{ hour }}" data-day="{{ day }}" 
+                                         style="background-color: hsl({{ (hour * 15 + loop.index0 * 5) % 360 }}, 70%, {{ 50 + (hour % 3) * 15 }}%);"
+                                         data-bs-toggle="tooltip" title="{{ day }} {{ hour }}:00 - {{ range(10, 100) | random }} vehicles">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-3 d-flex justify-content-between">
+                            <small class="text-muted">Low Traffic</small>
+                            <div class="heatmap-legend">
+                                <div class="legend-bar"></div>
+                            </div>
+                            <small class="text-muted">High Traffic</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Analytics Table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        Detailed Analytics
+                    </h5>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="exportData('csv')">
+                            <i class="fas fa-file-csv me-1"></i>
+                            Export CSV
+                        </button>
+                        <button class="btn btn-outline-success btn-sm" onclick="exportData('pdf')">
+                            <i class="fas fa-file-pdf me-1"></i>
+                            Export PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Time Period</th>
+                                    <th>Total Vehicles</th>
+                                    <th>Cars</th>
+                                    <th>Trucks</th>
+                                    <th>Motorcycles</th>
+                                    <th>Avg Speed</th>
+                                    <th>Incidents</th>
+                                    <th>Congestion Level</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analytics-table-body">
+                                <!-- Table rows will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <nav aria-label="Analytics pagination" class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1">Previous</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let trafficChart, vehicleChart, speedChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    loadAnalyticsData();
+    startRealTimeUpdates();
+});
+
+function initializeCharts() {
+    // Traffic Flow Chart
+    const trafficCtx = document.getElementById('trafficFlowChart').getContext('2d');
+    trafficChart = new Chart(trafficCtx, {
+        type: 'line',
+        data: {
+            labels: generateHourLabels(),
+            datasets: [
+                {
+                    label: 'Vehicle Count',
+                    data: generateTrafficData(),
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Predicted',
+                    data: generatePredictedData(),
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    borderDash: [5, 5],
+                    tension: 0.4,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Vehicles'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+
+    // Vehicle Classification Pie Chart
+    const vehicleCtx = document.getElementById('vehicleClassChart').getContext('2d');
+    vehicleChart = new Chart(vehicleCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Cars', 'Trucks', 'Motorcycles', 'Buses', 'Others'],
+            datasets: [{
+                data: [65, 20, 10, 3, 2],
+                backgroundColor: [
+                    '#3498db',
+                    '#2ecc71',
+                    '#f39c12',
+                    '#9b59b6',
+                    '#e74c3c'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Speed Distribution Chart
+    const speedCtx = document.getElementById('speedDistChart').getContext('2d');
+    speedChart = new Chart(speedCtx, {
+        type: 'bar',
+        data: {
+            labels: ['0-20', '21-30', '31-40', '41-50', '51-60', '61+'],
+            datasets: [{
+                label: 'Vehicle Count',
+                data: [45, 120, 350, 280, 150, 30],
+                backgroundColor: '#3498db',
+                borderColor: '#2980b9',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Vehicles'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Speed Range (mph)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function generateHourLabels() {
+    return Array.from({length: 24}, (_, i) => `${i}:00`);
+}
+
+function generateTrafficData() {
+    // Generate realistic traffic pattern
+    return Array.from({length: 24}, (_, hour) => {
+        // Peak hours: 7-9 AM and 5-7 PM
+        if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
+            return Math.floor(Math.random() * 200) + 300;
+        } else if (hour >= 22 || hour <= 6) {
+            return Math.floor(Math.random() * 50) + 10;
+        } else {
+            return Math.floor(Math.random() * 150) + 100;
+        }
+    });
+}
+
+function generatePredictedData() {
+    return generateTrafficData().map(val => val + Math.floor(Math.random() * 40) - 20);
+}
+
+function loadAnalyticsData() {
+    // Generate sample analytics table data
+    const tableBody = document.getElementById('analytics-table-body');
+    const timeRanges = [
+        '00:00 - 01:00', '01:00 - 02:00', '02:00 - 03:00', '03:00 - 04:00',
+        '04:00 - 05:00', '05:00 - 06:00', '06:00 - 07:00', '07:00 - 08:00',
+        '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00'
+    ];
+    
+    timeRanges.forEach(timeRange => {
+        const totalVehicles = Math.floor(Math.random() * 400) + 50;
+        const cars = Math.floor(totalVehicles * 0.65);
+        const trucks = Math.floor(totalVehicles * 0.20);
+        const motorcycles = Math.floor(totalVehicles * 0.10);
+        const avgSpeed = (Math.random() * 20 + 35).toFixed(1);
+        const incidents = Math.floor(Math.random() * 3);
+        const congestionLevels = ['Light', 'Moderate', 'Heavy'];
+        const congestion = congestionLevels[Math.floor(Math.random() * congestionLevels.length)];
+        
+        const row = `
+            <tr>
+                <td>${timeRange}</td>
+                <td><strong>${totalVehicles}</strong></td>
+                <td>${cars}</td>
+                <td>${trucks}</td>
+                <td>${motorcycles}</td>
+                <td>${avgSpeed} mph</td>
+                <td>${incidents}</td>
+                <td><span class="badge traffic-${congestion.toLowerCase()}">${congestion}</span></td>
+            </tr>
+        `;
+        tableBody.insertAdjacentHTML('beforeend', row);
+    });
+}
+
+function startRealTimeUpdates() {
+    const activityContainer = document.getElementById('realtime-activity');
+    
+    function addActivity() {
+        const activities = [
+            'Vehicle detected on Main Street',
+            'Speed violation recorded on Highway A',
+            'Traffic light cycle completed',
+            'Congestion detected at Junction B',
+            'Incident cleared on Downtown route',
+            'New vehicle entered monitoring zone',
+            'Heavy traffic alert triggered'
+        ];
+        
+        const activity = activities[Math.floor(Math.random() * activities.length)];
+        const time = new Date().toLocaleTimeString();
+        const cameraNames = ['Main Street', 'Highway Junction', 'School Zone', 'Downtown'];
+        const camera = cameraNames[Math.floor(Math.random() * cameraNames.length)];
+        
+        const activityItem = `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">${activity}</h6>
+                        <small class="text-muted">Camera: ${camera}</small>
+                    </div>
+                    <small class="text-muted">${time}</small>
+                </div>
+            </div>
+        `;
+        
+        activityContainer.insertAdjacentHTML('afterbegin', activityItem);
+        
+        // Keep only last 10 activities
+        const items = activityContainer.querySelectorAll('.list-group-item');
+        if (items.length > 10) {
+            items[items.length - 1].remove();
+        }
+    }
+    
+    // Add initial activities
+    for (let i = 0; i < 5; i++) {
+        addActivity();
+    }
+    
+    // Add new activity every 5 seconds
+    setInterval(addActivity, 5000);
+}
+
+function updateChart(period) {
+    // Update active button
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    let labels, data;
+    
+    switch(period) {
+        case 'hourly':
+            labels = generateHourLabels();
+            data = generateTrafficData();
+            break;
+        case 'daily':
+            labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            data = [1200, 1350, 1280, 1400, 1450, 900, 800];
+            break;
+        case 'weekly':
+            labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+            data = [8500, 9200, 8800, 9500];
+            break;
+    }
+    
+    trafficChart.data.labels = labels;
+    trafficChart.data.datasets[0].data = data;
+    trafficChart.update();
+}
+
+function exportData(format) {
+    showAlert(`Exporting analytics data as ${format.toUpperCase()}...`, 'info');
+    
+    // Simulate export process
+    setTimeout(() => {
+        showAlert(`Analytics data exported successfully as ${format.toUpperCase()}!`, 'success');
+    }, 2000);
+}
+
+// Auto-refresh analytics data
+setInterval(async function() {
+    try {
+        // Update charts with new data
+        trafficChart.data.datasets[0].data = generateTrafficData();
+        trafficChart.update();
+        
+        console.log('Analytics data refreshed');
+    } catch (error) {
+        console.error('Failed to refresh analytics data:', error);
+    }
+}, 60000); // Refresh every minute
+</script>
+
+<style>
+.heatmap-hour {
+    margin-bottom: 10px;
+}
+
+.heatmap-cell {
+    height: 20px;
+    width: 100%;
+    margin-bottom: 2px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.1);
+    border: 2px solid #fff;
+}
+
+.heatmap-legend {
+    width: 200px;
+    height: 20px;
+    background: linear-gradient(to right, #3498db, #f39c12, #e74c3c);
+    border-radius: 10px;
+}
+
+.legend-bar {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+
+#realtime-activity {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.list-group-item {
+    border-left: 4px solid var(--secondary-color);
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.card-header .btn-group .btn {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

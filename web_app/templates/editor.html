@@ -1,0 +1,663 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration Editor - {{ config.app.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.editor-tabs .nav-link {
+    border-radius: 10px 10px 0 0;
+    border: none;
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.editor-tabs .nav-link.active {
+    background-color: white;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--secondary-color);
+}
+
+.config-section {
+    border-left: 4px solid var(--secondary-color);
+    background-color: #f8f9fa;
+    margin-bottom: 20px;
+}
+
+.live-preview {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    min-height: 200px;
+}
+
+.json-viewer {
+    background-color: #263238;
+    color: #eeffff;
+    font-family: 'Courier New', monospace;
+    padding: 15px;
+    border-radius: 5px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.config-form .form-control:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-edit me-2 text-primary"></i>
+                Configuration Editor
+            </h1>
+            <p class="text-muted">Edit system configuration with live preview</p>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-flex gap-2">
+                <button class="btn btn-success" onclick="saveConfiguration()">
+                    <i class="fas fa-save me-2"></i>
+                    Save Configuration
+                </button>
+                <button class="btn btn-warning" onclick="resetConfiguration()">
+                    <i class="fas fa-undo me-2"></i>
+                    Reset to Default
+                </button>
+                <button class="btn btn-info" onclick="exportConfiguration()">
+                    <i class="fas fa-download me-2"></i>
+                    Export Config
+                </button>
+                <button class="btn btn-secondary" onclick="importConfiguration()">
+                    <i class="fas fa-upload me-2"></i>
+                    Import Config
+                </button>
+                <input type="file" id="config-file-input" accept=".yaml,.yml,.json" style="display: none;" onchange="handleFileImport(event)">
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Configuration Editor -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs editor-tabs card-header-tabs" id="editorTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="visual-tab" data-bs-toggle="tab" data-bs-target="#visual-editor" type="button" role="tab">
+                                <i class="fas fa-sliders-h me-2"></i>Visual Editor
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="code-tab" data-bs-toggle="tab" data-bs-target="#code-editor" type="button" role="tab">
+                                <i class="fas fa-code me-2"></i>Code Editor
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="json-tab" data-bs-toggle="tab" data-bs-target="#json-viewer" type="button" role="tab">
+                                <i class="fas fa-file-code me-2"></i>JSON View
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body">
+                    <div class="tab-content" id="editorTabsContent">
+                        <!-- Visual Editor Tab -->
+                        <div class="tab-pane fade show active" id="visual-editor" role="tabpanel">
+                            <form id="config-form" class="config-form">
+                                <!-- Application Settings -->
+                                <div class="config-section p-3 rounded">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-cog me-2"></i>Application Settings
+                                    </h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Application Title</label>
+                                            <input type="text" class="form-control" id="app-title" 
+                                                   value="{{ config.app.title }}" onchange="updateConfig()">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Version</label>
+                                            <input type="text" class="form-control" id="app-version" 
+                                                   value="{{ config.app.version }}" onchange="updateConfig()">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="app-debug" 
+                                                       {{ 'checked' if config.app.debug }} onchange="updateConfig()">
+                                                <label class="form-check-label" for="app-debug">
+                                                    Debug Mode
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Detection Settings -->
+                                <div class="config-section p-3 rounded">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-search me-2"></i>Detection Settings
+                                    </h5>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Detection Model</label>
+                                            <select class="form-select" id="detection-model" onchange="updateConfig()">
+                                                <option value="yolov8n" {{ 'selected' if config.detection.model == 'yolov8n' }}>YOLOv8n</option>
+                                                <option value="yolov8s" {{ 'selected' if config.detection.model == 'yolov8s' }}>YOLOv8s</option>
+                                                <option value="yolov8m" {{ 'selected' if config.detection.model == 'yolov8m' }}>YOLOv8m</option>
+                                                <option value="yolov8l" {{ 'selected' if config.detection.model == 'yolov8l' }}>YOLOv8l</option>
+                                                <option value="yolov8x" {{ 'selected' if config.detection.model == 'yolov8x' }}>YOLOv8x</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Confidence Threshold</label>
+                                            <input type="range" class="form-range" id="detection-confidence" 
+                                                   min="0.1" max="1.0" step="0.05" 
+                                                   value="{{ config.detection.confidence_threshold }}"
+                                                   onchange="updateConfig()">
+                                            <small class="text-muted">Value: <span id="confidence-display">{{ config.detection.confidence_threshold }}</span></small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Processing Device</label>
+                                            <select class="form-select" id="detection-device" onchange="updateConfig()">
+                                                <option value="cpu" {{ 'selected' if config.detection.device == 'cpu' }}>CPU</option>
+                                                <option value="cuda" {{ 'selected' if config.detection.device == 'cuda' }}>CUDA (GPU)</option>
+                                                <option value="mps" {{ 'selected' if config.detection.device == 'mps' }}>MPS (Apple Silicon)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tracking Settings -->
+                                <div class="config-section p-3 rounded">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-crosshairs me-2"></i>Tracking Settings
+                                    </h5>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Max Age (frames)</label>
+                                            <input type="number" class="form-control" id="tracking-max-age" 
+                                                   value="{{ config.tracking.max_age }}" onchange="updateConfig()">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Min Hits</label>
+                                            <input type="number" class="form-control" id="tracking-min-hits" 
+                                                   value="{{ config.tracking.min_hits }}" onchange="updateConfig()">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">IoU Threshold</label>
+                                            <input type="range" class="form-range" id="tracking-iou" 
+                                                   min="0.1" max="0.9" step="0.05" 
+                                                   value="{{ config.tracking.iou_threshold }}"
+                                                   onchange="updateConfig()">
+                                            <small class="text-muted">Value: <span id="iou-display">{{ config.tracking.iou_threshold }}</span></small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Custom Configuration -->
+                                <div class="config-section p-3 rounded">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-plus-circle me-2"></i>Add Custom Settings
+                                    </h5>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" id="custom-key" placeholder="Configuration key">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="text" class="form-control" id="custom-value" placeholder="Configuration value">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-primary w-100" onclick="addCustomConfig()">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="custom-configs" class="mt-3"></div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Code Editor Tab -->
+                        <div class="tab-pane fade" id="code-editor" role="tabpanel">
+                            <div class="editor-container">
+                                <div class="bg-secondary text-white p-2">
+                                    <small>
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Edit YAML configuration directly. Changes will be validated automatically.
+                                    </small>
+                                </div>
+                                <textarea id="yaml-editor"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- JSON Viewer Tab -->
+                        <div class="tab-pane fade" id="json-viewer" role="tabpanel">
+                            <div class="json-viewer">
+                                <pre id="json-display"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Preview -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye me-2"></i>Live Preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="live-preview p-3" id="live-preview">
+                        <div class="preview-section mb-3">
+                            <h6 class="text-primary">Application Info</h6>
+                            <div id="preview-app-info">
+                                <strong id="preview-title">{{ config.app.title }}</strong><br>
+                                <small class="text-muted">Version: <span id="preview-version">{{ config.app.version }}</span></small><br>
+                                <small class="text-muted">Debug: <span id="preview-debug">{{ 'Enabled' if config.app.debug else 'Disabled' }}</span></small>
+                            </div>
+                        </div>
+
+                        <div class="preview-section mb-3">
+                            <h6 class="text-primary">Detection Settings</h6>
+                            <div id="preview-detection">
+                                <small>Model: <strong id="preview-model">{{ config.detection.model }}</strong></small><br>
+                                <small>Confidence: <strong id="preview-conf">{{ config.detection.confidence_threshold }}</strong></small><br>
+                                <small>Device: <strong id="preview-device">{{ config.detection.device }}</strong></small>
+                            </div>
+                        </div>
+
+                        <div class="preview-section">
+                            <h6 class="text-primary">Tracking Settings</h6>
+                            <div id="preview-tracking">
+                                <small>Max Age: <strong id="preview-max-age">{{ config.tracking.max_age }}</strong></small><br>
+                                <small>Min Hits: <strong id="preview-min-hits">{{ config.tracking.min_hits }}</strong></small><br>
+                                <small>IoU Threshold: <strong id="preview-iou">{{ config.tracking.iou_threshold }}</strong></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Validation -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Validation Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="validation-status">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Configuration is valid
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightning-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadPreset('performance')">
+                            <i class="fas fa-rocket me-2"></i>Performance Preset
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadPreset('accuracy')">
+                            <i class="fas fa-bullseye me-2"></i>Accuracy Preset
+                        </button>
+                        <button class="btn btn-outline-success btn-sm" onclick="loadPreset('balanced')">
+                            <i class="fas fa-balance-scale me-2"></i>Balanced Preset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let yamlEditor;
+let currentConfig = {{ config | tojson }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize CodeMirror for YAML editing
+    yamlEditor = CodeMirror.fromTextArea(document.getElementById('yaml-editor'), {
+        mode: 'yaml',
+        theme: 'default',
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        indentUnit: 2,
+        tabSize: 2,
+        lineWrapping: true
+    });
+    
+    // Set initial YAML content
+    yamlEditor.setValue(configToYAML(currentConfig));
+    
+    // Update config when YAML changes
+    yamlEditor.on('change', function() {
+        try {
+            const yamlText = yamlEditor.getValue();
+            const parsedConfig = jsyaml.load(yamlText);
+            updateConfigFromObject(parsedConfig);
+            showValidationStatus(true, 'YAML is valid');
+        } catch (error) {
+            showValidationStatus(false, 'YAML syntax error: ' + error.message);
+        }
+    });
+    
+    // Initialize JSON display
+    updateJSONDisplay();
+    updateLivePreview();
+    
+    // Add range input listeners for real-time updates
+    document.getElementById('detection-confidence').addEventListener('input', function() {
+        document.getElementById('confidence-display').textContent = this.value;
+    });
+    
+    document.getElementById('tracking-iou').addEventListener('input', function() {
+        document.getElementById('iou-display').textContent = this.value;
+    });
+});
+
+// Configuration management functions
+function updateConfig() {
+    // Collect all form values
+    currentConfig.app.title = document.getElementById('app-title').value;
+    currentConfig.app.version = document.getElementById('app-version').value;
+    currentConfig.app.debug = document.getElementById('app-debug').checked;
+    
+    currentConfig.detection.model = document.getElementById('detection-model').value;
+    currentConfig.detection.confidence_threshold = parseFloat(document.getElementById('detection-confidence').value);
+    currentConfig.detection.device = document.getElementById('detection-device').value;
+    
+    currentConfig.tracking.max_age = parseInt(document.getElementById('tracking-max-age').value);
+    currentConfig.tracking.min_hits = parseInt(document.getElementById('tracking-min-hits').value);
+    currentConfig.tracking.iou_threshold = parseFloat(document.getElementById('tracking-iou').value);
+    
+    // Update displays
+    updateYAMLEditor();
+    updateJSONDisplay();
+    updateLivePreview();
+    validateConfiguration();
+}
+
+function updateYAMLEditor() {
+    const yamlText = configToYAML(currentConfig);
+    yamlEditor.setValue(yamlText);
+}
+
+function updateJSONDisplay() {
+    document.getElementById('json-display').textContent = JSON.stringify(currentConfig, null, 2);
+}
+
+function updateLivePreview() {
+    // Update application info
+    document.getElementById('preview-title').textContent = currentConfig.app.title;
+    document.getElementById('preview-version').textContent = currentConfig.app.version;
+    document.getElementById('preview-debug').textContent = currentConfig.app.debug ? 'Enabled' : 'Disabled';
+    
+    // Update detection settings
+    document.getElementById('preview-model').textContent = currentConfig.detection.model;
+    document.getElementById('preview-conf').textContent = currentConfig.detection.confidence_threshold;
+    document.getElementById('preview-device').textContent = currentConfig.detection.device;
+    
+    // Update tracking settings
+    document.getElementById('preview-max-age').textContent = currentConfig.tracking.max_age;
+    document.getElementById('preview-min-hits').textContent = currentConfig.tracking.min_hits;
+    document.getElementById('preview-iou').textContent = currentConfig.tracking.iou_threshold;
+}
+
+function validateConfiguration() {
+    let isValid = true;
+    let messages = [];
+    
+    // Validation logic
+    if (!currentConfig.app.title || currentConfig.app.title.trim() === '') {
+        isValid = false;
+        messages.push('Application title is required');
+    }
+    
+    if (currentConfig.detection.confidence_threshold < 0.1 || currentConfig.detection.confidence_threshold > 1.0) {
+        isValid = false;
+        messages.push('Confidence threshold must be between 0.1 and 1.0');
+    }
+    
+    if (currentConfig.tracking.max_age < 1) {
+        isValid = false;
+        messages.push('Max age must be at least 1');
+    }
+    
+    showValidationStatus(isValid, messages.join(', ') || 'Configuration is valid');
+}
+
+function showValidationStatus(isValid, message) {
+    const statusDiv = document.getElementById('validation-status');
+    const alertClass = isValid ? 'alert-success' : 'alert-danger';
+    const icon = isValid ? 'fa-check-circle' : 'fa-exclamation-triangle';
+    
+    statusDiv.innerHTML = `
+        <div class="alert ${alertClass}">
+            <i class="fas ${icon} me-2"></i>
+            ${message}
+        </div>
+    `;
+}
+
+// Save configuration to server
+async function saveConfiguration() {
+    try {
+        showAlert('Saving configuration...', 'info');
+        const result = await apiCall('/api/config', 'POST', currentConfig);
+        showAlert('Configuration saved successfully!', 'success');
+    } catch (error) {
+        showAlert('Failed to save configuration: ' + error.message, 'danger');
+    }
+}
+
+// Reset to default configuration
+function resetConfiguration() {
+    if (confirm('Are you sure you want to reset to default configuration? This will lose all current changes.')) {
+        // Reset to defaults
+        currentConfig = {
+            app: {
+                title: 'Traffic AI Dashboard',
+                version: '1.0.0',
+                debug: false
+            },
+            detection: {
+                model: 'yolov8n',
+                confidence_threshold: 0.5,
+                device: 'cpu'
+            },
+            tracking: {
+                max_age: 30,
+                min_hits: 3,
+                iou_threshold: 0.3
+            }
+        };
+        
+        updateFormFromConfig();
+        updateYAMLEditor();
+        updateJSONDisplay();
+        updateLivePreview();
+        showAlert('Configuration reset to defaults', 'success');
+    }
+}
+
+// Export configuration
+function exportConfiguration() {
+    const yamlText = configToYAML(currentConfig);
+    const blob = new Blob([yamlText], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'traffic_ai_config.yaml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showAlert('Configuration exported successfully', 'success');
+}
+
+// Import configuration
+function importConfiguration() {
+    document.getElementById('config-file-input').click();
+}
+
+function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let importedConfig;
+            
+            if (file.name.endsWith('.json')) {
+                importedConfig = JSON.parse(e.target.result);
+            } else {
+                importedConfig = jsyaml.load(e.target.result);
+            }
+            
+            currentConfig = importedConfig;
+            updateFormFromConfig();
+            updateYAMLEditor();
+            updateJSONDisplay();
+            updateLivePreview();
+            validateConfiguration();
+            
+            showAlert('Configuration imported successfully', 'success');
+        } catch (error) {
+            showAlert('Failed to import configuration: ' + error.message, 'danger');
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+// Load preset configurations
+function loadPreset(preset) {
+    const presets = {
+        performance: {
+            detection: {
+                model: 'yolov8n',
+                confidence_threshold: 0.3,
+                device: 'cuda'
+            }
+        },
+        accuracy: {
+            detection: {
+                model: 'yolov8x',
+                confidence_threshold: 0.7,
+                device: 'cuda'
+            }
+        },
+        balanced: {
+            detection: {
+                model: 'yolov8s',
+                confidence_threshold: 0.5,
+                device: 'cuda'
+            }
+        }
+    };
+    
+    Object.assign(currentConfig, presets[preset]);
+    updateFormFromConfig();
+    updateYAMLEditor();
+    updateJSONDisplay();
+    updateLivePreview();
+    validateConfiguration();
+    
+    showAlert(`${preset.charAt(0).toUpperCase() + preset.slice(1)} preset loaded`, 'success');
+}
+
+// Helper functions
+function updateFormFromConfig() {
+    document.getElementById('app-title').value = currentConfig.app.title;
+    document.getElementById('app-version').value = currentConfig.app.version;
+    document.getElementById('app-debug').checked = currentConfig.app.debug;
+    
+    document.getElementById('detection-model').value = currentConfig.detection.model;
+    document.getElementById('detection-confidence').value = currentConfig.detection.confidence_threshold;
+    document.getElementById('detection-device').value = currentConfig.detection.device;
+    
+    document.getElementById('tracking-max-age').value = currentConfig.tracking.max_age;
+    document.getElementById('tracking-min-hits').value = currentConfig.tracking.min_hits;
+    document.getElementById('tracking-iou').value = currentConfig.tracking.iou_threshold;
+    
+    // Update displays
+    document.getElementById('confidence-display').textContent = currentConfig.detection.confidence_threshold;
+    document.getElementById('iou-display').textContent = currentConfig.tracking.iou_threshold;
+}
+
+function configToYAML(config) {
+    // Simple YAML conversion (you might want to use js-yaml library for production)
+    return `app:
+  title: "${config.app.title}"
+  version: "${config.app.version}"
+  debug: ${config.app.debug}
+
+detection:
+  model: "${config.detection.model}"
+  confidence_threshold: ${config.detection.confidence_threshold}
+  device: "${config.detection.device}"
+
+tracking:
+  max_age: ${config.tracking.max_age}
+  min_hits: ${config.tracking.min_hits}
+  iou_threshold: ${config.tracking.iou_threshold}`;
+}
+
+function updateConfigFromObject(obj) {
+    currentConfig = obj;
+    updateFormFromConfig();
+    updateJSONDisplay();
+    updateLivePreview();
+}
+
+function addCustomConfig() {
+    const key = document.getElementById('custom-key').value.trim();
+    const value = document.getElementById('custom-value').value.trim();
+    
+    if (key && value) {
+        // Add to config (simple implementation)
+        showAlert(`Custom configuration "${key}" added`, 'success');
+        
+        // Clear inputs
+        document.getElementById('custom-key').value = '';
+        document.getElementById('custom-value').value = '';
+    } else {
+        showAlert('Please provide both key and value', 'warning');
+    }
+}
+</script>
+
+<!-- Add js-yaml library for YAML parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+{% endblock %}
